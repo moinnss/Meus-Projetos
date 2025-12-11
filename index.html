@@ -155,6 +155,33 @@
             background: var(--accent-color);
             color: white;
         }
+        
+        /* Specific styling for the card deck checkboxes */
+        .checkbox-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-group input[type=checkbox] {
+            width: 20px !important;
+            height: 20px;
+            margin-right: 10px !important;
+            /* Ensure checkbox is visible and styled */
+            -webkit-appearance: checkbox;
+            -moz-appearance: checkbox;
+            appearance: checkbox;
+            border: 1px solid var(--card-border);
+            background: var(--input-bg);
+        }
+        .checkbox-group label {
+            background: none;
+            padding: 0;
+            cursor: pointer;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
 
         /* Utility Class */
         .hidden { display: none; }
@@ -191,7 +218,7 @@
             margin-bottom: 2px;
         }
 
-        /* NEW: Discreet Role Display */
+        /* Discreet Role Display */
         .current-psychic {
             /* Smaller font size and less bold */
             font-size: 0.8rem; 
@@ -464,7 +491,18 @@
             <input type="radio" id="turnsCustom" name="turns" value="custom">
             <label for="turnsCustom">Custom</label>
         </div>
-        <input type="number" id="customTurnsInput" placeholder="Enter Custom Rounds" class="hidden">
+        <input type="number" id="customTurnsInput" placeholder="Enter Custom Rounds" class="hidden" min="1">
+        
+        <h3>Card Decks</h3>
+        <div class="checkbox-group">
+            <input type="checkbox" id="enableAICards">
+            <label for="enableAICards">Enable AI Cards (Funny Portuguese Deck)</label>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="enableChristmasCards">
+            <label for="enableChristmasCards">Deck de Natal 🎅 (Christmas Deck)</label>
+        </div>
         
         <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" id="btnStartGame">Start Game</button>
         <button class="btn btn-secondary" style="width: 100%;" id="btnStartQuickGame">Start Quick Game (No Names/Turns)</button>
@@ -563,6 +601,35 @@
             ["Normal Pet", "Exotic Pet"]
         ];
 
+        // FUNNY PORTUGUESE DECK
+        const aiConcepts = [
+            ["É meme", "Não é meme"],
+            ["Churrasco", "Rodízio de pizza"],
+            ["TikTok", "LinkedIn"],
+            ["Pior presente", "Melhor presente"],
+            ["Pagar a conta", "Dividir a conta"],
+            ["Rico de SP", "Rico do RJ"],
+            ["Calor de SP", "Calor de Teresina"],
+            ["Pior tipo de bolo", "Melhor tipo de bolo"],
+            ["Cheira bem", "Cheira mal"],
+            ["Deus", "Diabo"],
+            ["Mata a saudade", "Destrói a saudade"]
+        ];
+        
+        // CHRISTMAS DECK (NEW)
+        const christmasConcepts = [
+            ["Panetone bom", "Panetone ruim"],
+            ["Presente útil", "Presente inútil"],
+            ["Música de Natal boa", "Música de Natal irritante"],
+            ["Ceia de família", "Amigo Secreto da firma"],
+            ["Árvore de Natal brega", "Árvore de Natal chique"],
+            ["Papai Noel gordo", "Papai Noel fitness"],
+            ["Neve", "Praia"],
+            ["Peru", "Tender"],
+            ["Filme de Natal clássico", "Filme de Natal moderno"]
+        ];
+
+
         // --- DOM Elements ---
         const setupScreen = document.getElementById('setupScreen');
         const gameHeader = document.getElementById('gameHeader');
@@ -595,6 +662,8 @@
         const turnRadioButtons = document.querySelectorAll('input[name="turns"]');
         const btnStartGame = document.getElementById('btnStartGame');
         const btnStartQuickGame = document.getElementById('btnStartQuickGame');
+        const enableAICardsCheckbox = document.getElementById('enableAICards');
+        const enableChristmasCardsCheckbox = document.getElementById('enableChristmasCards'); // NEW ELEMENT
 
         // Game Score Elements
         const player1NameDisplay = document.getElementById('player1NameDisplay');
@@ -612,6 +681,8 @@
         let isTargetVisible = false;
         let isDarkMode = false;
         let gameMode = 'quick'; // 'quick' or 'scored'
+        let useAICards = false; 
+        let useChristmasCards = false; // NEW STATE VARIABLE
 
         // Scored Game State
         let maxTurns = 0; // Total number of rounds (Psychic/Guesser pair)
@@ -651,6 +722,23 @@
                         customTurnsInput.classList.add('hidden');
                     }
                 });
+            });
+
+            // Input validation for Custom Rounds to prevent non-numeric characters
+            customTurnsInput.addEventListener('keydown', (e) => {
+                // Allow backspace, delete, tab, escape, enter, and period
+                if ([46, 8, 9, 27, 13, 110].indexOf(e.keyCode) !== -1 ||
+                    // Allow: Ctrl+A, Command+A
+                    (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) ||
+                    // Allow: home, end, left, right (arrow keys)
+                    (e.keyCode >= 35 && e.keyCode <= 40)) {
+                    // Let it happen, don't do anything
+                    return;
+                }
+                // Ensure that it is a number and stop the keypress if not
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                    e.preventDefault();
+                }
             });
 
 
@@ -727,10 +815,14 @@
             players[1].score = 0;
             currentTurn = 0;
             currentPsychicIndex = 0; // Player 1 starts as Psychic
+            useAICards = enableAICardsCheckbox.checked; 
+            useChristmasCards = enableChristmasCardsCheckbox.checked; // READ NEW CHECKBOX
 
             const selectedTurns = document.querySelector('input[name="turns"]:checked').value;
             if (selectedTurns === 'custom') {
-                maxTurns = parseInt(customTurnsInput.value.trim()) || 10;
+                let customVal = parseInt(customTurnsInput.value.trim());
+                // Force positive integer, minimum 1
+                maxTurns = Math.max(1, customVal) || 10; 
             } else {
                 maxTurns = parseInt(selectedTurns);
             }
@@ -745,6 +837,7 @@
 
         function startQuickGame() {
             gameMode = 'quick';
+            // In quick game mode, player names and scores are ignored/hidden
             players[0].name = 'Player 1';
             players[1].name = 'Player 2';
             players[0].score = 0;
@@ -752,6 +845,8 @@
             maxTurns = 0; // Infinite rounds
             currentTurn = 0;
             currentPsychicIndex = 0;
+            useAICards = enableAICardsCheckbox.checked; 
+            useChristmasCards = enableChristmasCardsCheckbox.checked; // READ NEW CHECKBOX
 
             setupScreen.classList.add('hidden');
             gameHeader.classList.remove('hidden');
@@ -771,23 +866,43 @@
             const p1 = players[0];
             const p2 = players[1];
 
-            // Update Player Names and Scores
-            player1NameDisplay.textContent = p1.name;
-            player2NameDisplay.textContent = p2.name;
-            player1TotalScore.textContent = p1.score;
-            player2TotalScore.textContent = p2.score;
-
-            // Update Role Display
-            player1Role.textContent = currentPsychicIndex === 0 ? 'Psychic' : 'Guesser';
-            player2Role.textContent = currentPsychicIndex === 1 ? 'Psychic' : 'Guesser';
-            
-            // Update Turn Tracker
             if (gameMode === 'scored') {
+                // Scored Mode: Show Names and Scores
+                player1NameDisplay.textContent = p1.name;
+                player2NameDisplay.textContent = p2.name;
+                player1TotalScore.textContent = p1.score;
+                player2TotalScore.textContent = p2.score;
+
                 const psychic = players[currentPsychicIndex];
                 const guesser = players[1 - currentPsychicIndex];
                 turnTracker.textContent = `Round ${currentTurn + 1} of ${maxTurns}. ${psychic.name} (P) ➡️ ${guesser.name} (G)`;
+                
+                // Show discreet role display
+                player1Role.textContent = currentPsychicIndex === 0 ? 'Psychic' : 'Guesser';
+                player2Role.textContent = currentPsychicIndex === 1 ? 'Psychic' : 'Guesser';
+
             } else {
-                turnTracker.textContent = `Quick Game Mode. ${players[currentPsychicIndex].name} is Psychic.`;
+                // Quick Mode: Implement requested names and tracking
+                if (currentPsychicIndex === 0) {
+                    // Player 1 is Psychic
+                    player1NameDisplay.textContent = 'Psychic';
+                    player2NameDisplay.textContent = 'Giant Blue Guesser';
+                } else {
+                    // Player 2 is Psychic
+                    player1NameDisplay.textContent = 'Giant Blue Guesser';
+                    player2NameDisplay.textContent = 'Psychic';
+                }
+                
+                player1TotalScore.textContent = '';
+                player2TotalScore.textContent = '';
+
+                // Set turn tracker text: "Player 1 is the Psychic"
+                const currentPlayerId = players[currentPsychicIndex].id;
+                turnTracker.textContent = `Quick Game Mode. Player ${currentPlayerId} is the Psychic.`;
+
+                // Hide the discreet role display
+                player1Role.textContent = ''; 
+                player2Role.textContent = '';
             }
         }
 
@@ -797,8 +912,27 @@
                 return;
             }
             
+            // Start with the standard deck
+            let deckToUse = [...concepts]; 
+            
+            // Concatenate selected decks
+            if (useAICards) {
+                deckToUse = deckToUse.concat(aiConcepts);
+            }
+            
+            if (useChristmasCards) {
+                deckToUse = deckToUse.concat(christmasConcepts);
+            }
+            
+            // Check if any cards are available (should only happen if all decks are empty)
+            if (deckToUse.length === 0) {
+                 setupBoard('No Cards', 'Available');
+                 return;
+            }
+
+
             // Select a new random card
-            const pair = concepts[Math.floor(Math.random() * concepts.length)];
+            const pair = deckToUse[Math.floor(Math.random() * deckToUse.length)];
             // Randomly flip concepts
             if (Math.random() > 0.5) {
                 setupBoard(pair[0], pair[1]);
@@ -852,7 +986,7 @@
             gameState.textContent = `${players[currentPsychicIndex].name} (Psychic) Phase: View target & give a clue`;
             gameState.style.color = "var(--divider-color)";
             
-            updateScoreboard(); // Update player roles
+            updateScoreboard(); // Update player roles and visibility
         }
 
         function startGuessingPhase() {
@@ -919,7 +1053,14 @@
             currentTurn++;
 
             roundScoreDisplay.textContent = message;
-            gameState.textContent = `Round Over. Target was at ${targetAngle}°. Your guess was ${guess}°. ${players[guesserIndex].name} scores ${points} points.`;
+            
+            // Only show score breakdown in scored mode
+            if (gameMode === 'scored') {
+                gameState.textContent = `Round Over. Target was at ${targetAngle}°. Your guess was ${guess}°. ${players[guesserIndex].name} scores ${points} points.`;
+            } else {
+                gameState.textContent = `Round Over. Target was at ${targetAngle}°. Your guess was ${guess}°.`;
+            }
+            
             gameState.style.color = "var(--needle-color)";
             btnReveal.style.display = 'none';
             btnToggleTarget.style.display = 'none'; 
@@ -931,7 +1072,7 @@
             // --- Switch Roles for Next Round ---
             currentPsychicIndex = 1 - currentPsychicIndex;
             
-            updateScoreboard(); // Update scores and reflect the next round's roles
+            updateScoreboard(); // Update scores, roles, and visibility for the next quick round
 
             if (gameMode === 'scored' && currentTurn >= maxTurns) {
                  turnTracker.textContent = `Final Round Complete! Click 'New Card' to see the final results.`;
