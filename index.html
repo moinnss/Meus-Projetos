@@ -93,6 +93,120 @@
             box-sizing: border-box;
             transition: background-color 0.3s ease;
         }
+        
+        /* Game Setup Screen */
+        #setupScreen {
+            background: var(--container-bg);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            text-align: left;
+            border: 2px solid var(--accent-color);
+        }
+
+        #setupScreen h2 {
+            margin-top: 0;
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        #setupScreen input[type=text], #setupScreen input[type=number] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--input-bg);
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .radio-group label {
+            background: var(--secondary-btn-bg);
+            color: var(--secondary-btn-text);
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+        }
+        .radio-group input[type=radio] {
+            display: none;
+        }
+        .radio-group input[type=radio]:checked + label {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* Utility Class */
+        .hidden { display: none; }
+
+        /* Scoreboard */
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .player-score {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 45%; 
+            overflow: hidden;
+        }
+        .player-score span {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            line-height: 1;
+        }
+        
+        /* Player Name styling - kept as is */
+        .player-name-display {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 2px;
+        }
+
+        /* NEW: Discreet Role Display */
+        .current-psychic {
+            /* Smaller font size and less bold */
+            font-size: 0.8rem; 
+            font-weight: 500;
+            color: #FF9500; /* Use the orange accent color for visibility */
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .turn-tracker {
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: var(--divider-color);
+            font-size: 0.9rem; /* Slightly smaller for turn info */
+        }
 
         /* The Spectrum Card */
         .card {
@@ -270,6 +384,8 @@
 
         .btn-reveal { background: #34C759; color: white; display: none; }
         .btn-reveal:active { background: #248a3d; transform: scale(0.98); }
+        .btn-end-game { background: #FF3B30; color: white; }
+        .btn-end-game:active { opacity: 0.9; transform: scale(0.98); }
 
         .game-state {
             margin-top: 15px;
@@ -279,7 +395,7 @@
             font-weight: 500;
         }
         
-        .score-display {
+        .round-score-display {
             margin-top: 5px;
             font-size: 1.6rem;
             font-weight: 800;
@@ -324,13 +440,57 @@
     </style>
 </head>
 <body>
+    
+    <div id="setupScreen">
+        <h2>Game Setup</h2>
 
-    <div class="header-row">
+        <label for="player1Name">Player 1 Name</label>
+        <input type="text" id="player1Name" placeholder="Player 1">
+
+        <label for="player2Name">Player 2 Name</label>
+        <input type="text" id="player2Name" placeholder="Player 2">
+
+        <h3>Total Rounds to Play (Psychic/Guesser Roles will switch each round)</h3>
+        <div class="radio-group">
+            <input type="radio" id="turns5" name="turns" value="5" checked>
+            <label for="turns5">5 Rounds</label>
+
+            <input type="radio" id="turns10" name="turns" value="10">
+            <label for="turns10">10 Rounds</label>
+
+            <input type="radio" id="turns15" name="turns" value="15">
+            <label for="turns15">15 Rounds</label>
+
+            <input type="radio" id="turnsCustom" name="turns" value="custom">
+            <label for="turnsCustom">Custom</label>
+        </div>
+        <input type="number" id="customTurnsInput" placeholder="Enter Custom Rounds" class="hidden">
+        
+        <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" id="btnStartGame">Start Game</button>
+        <button class="btn btn-secondary" style="width: 100%;" id="btnStartQuickGame">Start Quick Game (No Names/Turns)</button>
+    </div>
+
+    <div class="header-row hidden" id="gameHeader">
         <h1>Web Wavelength</h1>
         <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">🌙</button>
     </div>
 
-    <div class="game-container">
+    <div class="game-container hidden" id="gameContainer">
+        
+        <div class="score-board">
+            <div class="player-score" id="player1ScoreDisplay">
+                <span id="player1TotalScore">0</span>
+                <span id="player1NameDisplay" class="player-name-display">Player 1</span>
+                <span id="player1Role" class="current-psychic"></span>
+            </div>
+            <div class="player-score" id="player2ScoreDisplay">
+                <span id="player2TotalScore">0</span>
+                <span id="player2NameDisplay" class="player-name-display">Player 2</span>
+                <span id="player2Role" class="current-psychic"></span>
+            </div>
+        </div>
+        <div class="turn-tracker" id="turnTracker">Quick Game Mode</div>
+
         <div class="dial-wrapper">
             <div class="dial-face">
                 <div class="target-zone" id="targetZone"></div>
@@ -349,7 +509,7 @@
             <input type="range" min="0" max="180" value="90" id="dialInput">
         </div>
 
-        <div class="score-display" id="scoreDisplay"></div>
+        <div class="round-score-display" id="roundScoreDisplay"></div>
         <div class="game-state" id="gameState">Psychic Phase: View target & give a clue</div>
 
         <div class="controls">
@@ -362,6 +522,7 @@
                 <button class="btn btn-secondary" id="btnSameCard">Same Card, New Target</button>
                 <button class="btn btn-secondary" id="btnNewRound">New Card</button>
             </div>
+            <button class="btn btn-end-game" id="btnEndGame">End Game</button>
         </div>
 
         <div class="custom-section">
@@ -376,7 +537,7 @@
 
     <script>
         // --- Game Data ---
-         const concepts = [
+        const concepts = [
             ["Hot", "Cold"],
             ["Hetero", "Gay"],
             ["Mulher", "Homem"],
@@ -403,13 +564,17 @@
         ];
 
         // --- DOM Elements ---
+        const setupScreen = document.getElementById('setupScreen');
+        const gameHeader = document.getElementById('gameHeader');
+        const gameContainer = document.getElementById('gameContainer');
+
         const needle = document.getElementById('needle');
         const psychicMarker = document.getElementById('psychicMarker'); 
         const dialInput = document.getElementById('dialInput');
         const targetZone = document.getElementById('targetZone');
         const leftConcept = document.getElementById('leftConcept');
         const rightConcept = document.getElementById('rightConcept');
-        const scoreDisplay = document.getElementById('scoreDisplay');
+        const roundScoreDisplay = document.getElementById('roundScoreDisplay');
         const gameState = document.getElementById('gameState');
         const themeToggle = document.getElementById('themeToggle');
         
@@ -419,8 +584,26 @@
         const btnNewRound = document.getElementById('btnNewRound');
         const btnSameCard = document.getElementById('btnSameCard');
         const btnUseCustom = document.getElementById('btnUseCustom');
+        const btnEndGame = document.getElementById('btnEndGame');
         const customLeft = document.getElementById('customLeft');
         const customRight = document.getElementById('customRight');
+
+        // Setup Screen Elements
+        const player1NameInput = document.getElementById('player1Name');
+        const player2NameInput = document.getElementById('player2Name');
+        const customTurnsInput = document.getElementById('customTurnsInput');
+        const turnRadioButtons = document.querySelectorAll('input[name="turns"]');
+        const btnStartGame = document.getElementById('btnStartGame');
+        const btnStartQuickGame = document.getElementById('btnStartQuickGame');
+
+        // Game Score Elements
+        const player1NameDisplay = document.getElementById('player1NameDisplay');
+        const player2NameDisplay = document.getElementById('player2NameDisplay');
+        const player1TotalScore = document.getElementById('player1TotalScore');
+        const player2TotalScore = document.getElementById('player2TotalScore');
+        const player1Role = document.getElementById('player1Role');
+        const player2Role = document.getElementById('player2Role');
+        const turnTracker = document.getElementById('turnTracker');
 
         // --- State ---
         let targetAngle = 90; 
@@ -428,19 +611,49 @@
         let bullseyeWidth = 6; 
         let isTargetVisible = false;
         let isDarkMode = false;
+        let gameMode = 'quick'; // 'quick' or 'scored'
+
+        // Scored Game State
+        let maxTurns = 0; // Total number of rounds (Psychic/Guesser pair)
+        let currentTurn = 0; // Current round number
+        let players = [ // Players array for easy role switching (index 0 and 1)
+            { id: 1, name: 'Player 1', score: 0 },
+            { id: 2, name: 'Player 2', score: 0 }
+        ];
+        let currentPsychicIndex = 0; // Index of the player who is the Psychic this round (0 or 1)
+
 
         // --- Initialization ---
         function init() {
             setupEventListeners();
-            startRandomRound();
+            setupBoard('Loading...', 'Loading...'); // Prepare the first card
+            // Hide game elements initially
+            gameHeader.classList.add('hidden');
+            gameContainer.classList.add('hidden');
             
-            // Check system preference
+            // Check system preference for dark mode
             if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 toggleTheme();
             }
         }
 
         function setupEventListeners() {
+            // Setup Screen Listeners
+            btnStartGame.addEventListener('click', startGame);
+            btnStartQuickGame.addEventListener('click', startQuickGame);
+            btnEndGame.addEventListener('click', () => { showSetupScreen(true); });
+
+            turnRadioButtons.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'custom') {
+                        customTurnsInput.classList.remove('hidden');
+                    } else {
+                        customTurnsInput.classList.add('hidden');
+                    }
+                });
+            });
+
+
             // Theme Toggle
             themeToggle.addEventListener('click', toggleTheme);
 
@@ -456,7 +669,7 @@
             }, { passive: false });
 
             // Buttons
-            btnNewRound.addEventListener('click', startRandomRound);
+            btnNewRound.addEventListener('click', startNewRound);
             
             btnSameCard.addEventListener('click', () => {
                 const currentLeft = leftConcept.textContent;
@@ -481,22 +694,69 @@
                 updateTargetVisibility();
             });
 
-            btnHideForGuessing.addEventListener('click', () => {
-                isTargetVisible = false;
-                updateTargetVisibility();
-                
-                psychicMarker.classList.remove('visible'); 
-                
-                btnToggleTarget.style.display = 'none';
-                btnHideForGuessing.style.display = 'none';
-                btnReveal.style.display = 'inline-block';
-                
-                gameState.textContent = "Guesser Phase: Move the dial to the clue!";
-                gameState.style.color = "var(--accent-color)";
-                dialInput.disabled = false;
-            });
+            btnHideForGuessing.addEventListener('click', startGuessingPhase);
 
             btnReveal.addEventListener('click', revealResult);
+        }
+
+        function showSetupScreen(isEndingGame = false) {
+            setupScreen.classList.remove('hidden');
+            gameHeader.classList.add('hidden');
+            gameContainer.classList.add('hidden');
+
+            if (isEndingGame && gameMode === 'scored') {
+                const p1 = players[0];
+                const p2 = players[1];
+                let winnerMessage = '';
+                if (p1.score > p2.score) {
+                    winnerMessage = `${p1.name} wins with ${p1.score} points!`;
+                } else if (p2.score > p1.score) {
+                    winnerMessage = `${p2.name} wins with ${p2.score} points!`;
+                } else {
+                    winnerMessage = "It's a tie!";
+                }
+                alert(`Game Over!\nFinal Score: ${p1.name}: ${p1.score} | ${p2.name}: ${p2.score}\n${winnerMessage}`);
+            }
+        }
+
+        function startGame() {
+            gameMode = 'scored';
+            players[0].name = player1NameInput.value.trim() || 'Player 1';
+            players[1].name = player2NameInput.value.trim() || 'Player 2';
+            players[0].score = 0;
+            players[1].score = 0;
+            currentTurn = 0;
+            currentPsychicIndex = 0; // Player 1 starts as Psychic
+
+            const selectedTurns = document.querySelector('input[name="turns"]:checked').value;
+            if (selectedTurns === 'custom') {
+                maxTurns = parseInt(customTurnsInput.value.trim()) || 10;
+            } else {
+                maxTurns = parseInt(selectedTurns);
+            }
+
+            if (maxTurns < 1) maxTurns = 1; // Minimum one round
+
+            setupScreen.classList.add('hidden');
+            gameHeader.classList.remove('hidden');
+            gameContainer.classList.remove('hidden');
+            startNewRound();
+        }
+
+        function startQuickGame() {
+            gameMode = 'quick';
+            players[0].name = 'Player 1';
+            players[1].name = 'Player 2';
+            players[0].score = 0;
+            players[1].score = 0;
+            maxTurns = 0; // Infinite rounds
+            currentTurn = 0;
+            currentPsychicIndex = 0;
+
+            setupScreen.classList.add('hidden');
+            gameHeader.classList.remove('hidden');
+            gameContainer.classList.remove('hidden');
+            startNewRound();
         }
 
         function toggleTheme() {
@@ -505,10 +765,41 @@
             themeToggle.textContent = isDarkMode ? "☀️" : "🌙";
         }
 
-        // --- Core Logic ---
+        // --- Core Game Logic ---
 
-        function startRandomRound() {
+        function updateScoreboard() {
+            const p1 = players[0];
+            const p2 = players[1];
+
+            // Update Player Names and Scores
+            player1NameDisplay.textContent = p1.name;
+            player2NameDisplay.textContent = p2.name;
+            player1TotalScore.textContent = p1.score;
+            player2TotalScore.textContent = p2.score;
+
+            // Update Role Display
+            player1Role.textContent = currentPsychicIndex === 0 ? 'Psychic' : 'Guesser';
+            player2Role.textContent = currentPsychicIndex === 1 ? 'Psychic' : 'Guesser';
+            
+            // Update Turn Tracker
+            if (gameMode === 'scored') {
+                const psychic = players[currentPsychicIndex];
+                const guesser = players[1 - currentPsychicIndex];
+                turnTracker.textContent = `Round ${currentTurn + 1} of ${maxTurns}. ${psychic.name} (P) ➡️ ${guesser.name} (G)`;
+            } else {
+                turnTracker.textContent = `Quick Game Mode. ${players[currentPsychicIndex].name} is Psychic.`;
+            }
+        }
+
+        function startNewRound() {
+            if (gameMode === 'scored' && currentTurn >= maxTurns) {
+                showSetupScreen(true); // Show end game screen
+                return;
+            }
+            
+            // Select a new random card
             const pair = concepts[Math.floor(Math.random() * concepts.length)];
+            // Randomly flip concepts
             if (Math.random() > 0.5) {
                 setupBoard(pair[0], pair[1]);
             } else {
@@ -553,10 +844,33 @@
             btnToggleTarget.style.display = 'inline-block';
             btnHideForGuessing.style.display = 'inline-block';
             btnReveal.style.display = 'none';
+            btnSameCard.disabled = false;
+            btnNewRound.disabled = false;
+            btnUseCustom.disabled = false;
             
-            scoreDisplay.textContent = "";
-            gameState.textContent = "Psychic Phase: View target & give a clue";
+            roundScoreDisplay.textContent = "";
+            gameState.textContent = `${players[currentPsychicIndex].name} (Psychic) Phase: View target & give a clue`;
             gameState.style.color = "var(--divider-color)";
+            
+            updateScoreboard(); // Update player roles
+        }
+
+        function startGuessingPhase() {
+            isTargetVisible = false;
+            updateTargetVisibility();
+            
+            psychicMarker.classList.remove('visible'); 
+            
+            btnToggleTarget.style.display = 'none';
+            btnHideForGuessing.style.display = 'none';
+            btnReveal.style.display = 'inline-block';
+            btnSameCard.disabled = true;
+            btnNewRound.disabled = true;
+            btnUseCustom.disabled = true;
+            
+            gameState.textContent = `${players[1 - currentPsychicIndex].name} (Guesser) Phase: Move the dial to the clue!`;
+            gameState.style.color = "var(--accent-color)";
+            dialInput.disabled = false;
         }
 
         function updateTargetVisibility() {
@@ -583,13 +897,13 @@
             const bullseyeRadius = bullseyeWidth / 2;
             const targetRadius = targetWidth / 2;
 
-            if (dist <= bullseyeRadius +2) {
+            if (dist <= bullseyeRadius) {
                 points = 4; // Bullseye
                 message = "PERFECT! (4 pts - Bullseye)";
-            } else if (dist <= targetRadius +2) {
+            } else if (dist <= targetRadius) {
                 points = 3; // Inner Ring
                 message = "Great! (3 pts - Inner Ring)";
-            } else if (dist <= targetRadius + 7) {
+            } else if (dist <= targetRadius + 10) { 
                 points = 2; // Outer Ring
                 message = "Close! (2 pts - Outer Ring)";
             } else {
@@ -597,12 +911,31 @@
                 message = "Miss (0 pts)";
             }
 
-            scoreDisplay.textContent = message;
-            gameState.textContent = `Round Over. Target was at ${targetAngle}°. Your guess was ${guess}°.`;
+            // Award points to the Guesser (the one who was NOT the Psychic)
+            const guesserIndex = 1 - currentPsychicIndex;
+            players[guesserIndex].score += points;
+
+            // Advance turn/round counter
+            currentTurn++;
+
+            roundScoreDisplay.textContent = message;
+            gameState.textContent = `Round Over. Target was at ${targetAngle}°. Your guess was ${guess}°. ${players[guesserIndex].name} scores ${points} points.`;
             gameState.style.color = "var(--needle-color)";
             btnReveal.style.display = 'none';
             btnToggleTarget.style.display = 'none'; 
+            btnSameCard.disabled = false; 
+            btnNewRound.disabled = false;
+            btnUseCustom.disabled = false;
             dialInput.disabled = true;
+
+            // --- Switch Roles for Next Round ---
+            currentPsychicIndex = 1 - currentPsychicIndex;
+            
+            updateScoreboard(); // Update scores and reflect the next round's roles
+
+            if (gameMode === 'scored' && currentTurn >= maxTurns) {
+                 turnTracker.textContent = `Final Round Complete! Click 'New Card' to see the final results.`;
+            } 
         }
 
         init();
