@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Web Wavelength - Dark Mode</title>
+    <style>
+        :root {
+            /* Light Mode Defaults */
+            --bg-color: #f0f4f8;
+            --container-bg: #ffffff;
+            --dial-bg: #e2e8f0;
+            --needle-color: #ef4444; 
+            --accent-color: #007AFF; 
+            --text-color: #1c1c1e;
+            --card-border: #cbd5e1;
+            --secondary-btn-bg: #e5e7eb;
+            --secondary-btn-text: #374151;
+            --input-bg: #f8fafc;
+            --divider-color: #94a3b8;
+            --marker-color: #2c2c2e;
+        }
+
+        /* Dark Mode Overrides */
+        body.dark-mode {
+            --bg-color: #121212;
+            --container-bg: #1c1c1e;
+            --dial-bg: #2c2c2e;
+            --needle-color: #ff5252;
+            --accent-color: #0a84ff;
+            --text-color: #f0f0f0;
+            --card-border: #3a3a3c;
+            --secondary-btn-bg: #3a3a3c;
+            --secondary-btn-text: #ffffff;
+            --input-bg: #2c2c2e;
+            --divider-color: #636366;
+            --marker-color: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overscroll-behavior: none; 
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Header Layout */
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 10px;
+        }
+
+        h1 { margin: 0; font-weight: 700; letter-spacing: -0.5px; }
+
+        /* Dark Mode Toggle Button */
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .theme-toggle:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        body.dark-mode .theme-toggle:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* Game Board Area */
+        .game-container {
+            background: var(--container-bg);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease;
+        }
+
+        /* The Spectrum Card */
+        .card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--container-bg); /* Matches container */
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 30px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: border-color 0.3s ease;
+        }
+        .left-concept { color: var(--accent-color); text-align: left; width: 45%; overflow-wrap: break-word; line-height: 1.2; }
+        .right-concept { color: #FF9500; text-align: right; width: 45%; overflow-wrap: break-word; line-height: 1.2; }
+        .divider { color: var(--divider-color); font-size: 1.5rem; }
+
+        /* The Semi-Circle Dial */
+        .dial-wrapper {
+            position: relative;
+            width: 300px;
+            height: 150px; 
+            margin: 0 auto 30px auto;
+            overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            transform: translateZ(0); 
+            /* Fix mask for dark mode edges */
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+        }
+
+        .dial-face {
+            width: 300px;
+            height: 300px;
+            background: var(--dial-bg);
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            will-change: transform; 
+            transition: background-color 0.3s ease;
+        }
+
+        /* Target Zone (The Pie Slice) */
+        .target-zone {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 270deg, 
+                transparent 0deg, 
+                transparent var(--start-deg), 
+                #fcd34d var(--start-deg), 
+                #FF9500 var(--center-start),
+                #34C759 var(--center-end), /* Bullseye color */
+                #FF9500 var(--center-end),
+                #fcd34d var(--end-deg), 
+                transparent var(--end-deg), 
+                transparent 360deg
+            );
+            opacity: 0; 
+            transition: opacity 0.5s ease;
+        }
+
+        .target-zone.visible { opacity: 1; }
+
+        /* The Needle (Player's Guess Pointer) */
+        .needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            height: 140px;
+            background-color: var(--needle-color);
+            transform-origin: bottom center; 
+            transform: translateX(-50%) rotate(-90deg); 
+            transition: transform 0.15s ease-out; 
+            z-index: 10;
+            border-radius: 4px 4px 0 0;
+            pointer-events: none; 
+            box-shadow: 0 0 4px rgba(0,0,0,0.3);
+        }
+        
+        .needle::after {
+            content: '';
+            position: absolute;
+            bottom: -10px; left: -8px;
+            width: 20px; height: 20px;
+            background: var(--needle-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(0,0,0,0.4);
+        }
+
+        /* The Psychic's Target Marker */
+        .psychic-marker {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            height: 140px;
+            background-color: var(--marker-color); 
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(-90deg);
+            transition: transform 0.1s ease-out;
+            z-index: 9;
+            opacity: 0;
+        }
+
+        .psychic-marker.visible {
+            opacity: 1;
+        }
+
+        /* Slider Controls - Safari Optimized */
+        .slider-container {
+            width: 90%;
+            margin: 0 auto 20px auto;
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+        }
+        
+        input[type=range] {
+            width: 100%;
+            -webkit-appearance: none; 
+            appearance: none;
+            background: transparent;
+            margin: 0;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px; 
+            width: 28px;
+            border-radius: 50%;
+            background: #fff; /* Thumb stays white for contrast */
+            border: 0.5px solid rgba(0,0,0,0.04);
+            cursor: pointer;
+            margin-top: -12px; 
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: var(--card-border);
+            border-radius: 2px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-primary:active { opacity: 0.9; transform: scale(0.98); }
+        
+        .btn-secondary { background: var(--secondary-btn-bg); color: var(--secondary-btn-text); }
+        .btn-secondary:active { opacity: 0.9; transform: scale(0.98); }
+
+        .btn-reveal { background: #34C759; color: white; display: none; }
+        .btn-reveal:active { background: #248a3d; transform: scale(0.98); }
+
+        .game-state {
+            margin-top: 15px;
+            font-style: italic;
+            color: var(--divider-color);
+            min-height: 24px;
+            font-weight: 500;
+        }
+        
+        .score-display {
+            margin-top: 5px;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            min-height: 35px;
+        }
+
+        /* Custom Card Section */
+        .custom-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--card-border);
+        }
+        .custom-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .custom-input {
+            width: 50%;
+            padding: 12px;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            font-size: 1rem;
+            -webkit-appearance: none; 
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+        h3 { 
+            margin-top: 0; color: var(--divider-color); font-size: 0.9rem; 
+            text-transform: uppercase; letter-spacing: 1px; font-weight: 700;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-group .btn {
+            flex: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header-row">
+        <h1>Web Wavelength</h1>
+        <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">🌙</button>
+    </div>
+
+    <div class="game-container">
+        <div class="dial-wrapper">
+            <div class="dial-face">
+                <div class="target-zone" id="targetZone"></div>
+            </div>
+            <div class="psychic-marker" id="psychicMarker"></div>
+            <div class="needle" id="needle"></div>
+        </div>
+
+        <div class="card">
+            <span class="left-concept" id="leftConcept">Loading...</span>
+            <span class="divider">⬌</span>
+            <span class="right-concept" id="rightConcept">Loading...</span>
+        </div>
+
+        <div class="slider-container">
+            <input type="range" min="0" max="180" value="90" id="dialInput">
+        </div>
+
+        <div class="score-display" id="scoreDisplay"></div>
+        <div class="game-state" id="gameState">Psychic Phase: View target & give a clue</div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="btnToggleTarget">Toggle Target Visibility</button>
+            <button class="btn btn-secondary" id="btnHideForGuessing">Close Target (Ready to Guess)</button>
+            
+            <button class="btn btn-reveal" id="btnReveal">Reveal!</button>
+            
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btnSameCard">Same Card, New Target</button>
+                <button class="btn btn-secondary" id="btnNewRound">New Card</button>
+            </div>
+        </div>
+
+        <div class="custom-section">
+            <h3>Create Custom Card</h3>
+            <div class="custom-inputs">
+                <input type="text" class="custom-input" id="customLeft" placeholder="Left Concept">
+                <input type="text" class="custom-input" id="customRight" placeholder="Right Concept">
+            </div>
+            <button class="btn btn-primary" style="width: 100%; background: #8e8e93;" id="btnUseCustom">Play Custom Card</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Data ---
+         const concepts = [
+            ["Hot", "Cold"],
+            ["Hetero", "Gay"],
+            ["Mulher", "Homem"],
+            ["Date ruim", "Date Bom"],
+            ["Superpoder ruim", "Superpoder bom"],
+            ["Obrigação", "Opcional"],
+            ["Viagem boa", "viagem ruim"],
+            ["Imperdoavel", "Perdoavel"],
+            ["Fragile", "Durable"],
+            ["É traição", "Não é traição"],
+            ["Pessoa que me daria uma surra", "Pessoa que eu dsria uma surra"],
+            ["Taste", "Nutrition"],
+            ["Maromba", "Nerd"],
+            ["Aline", "Moisés"],
+            ["Comida boa", "Comida ruim"],
+            ["Todo mundo gosta", "Todo mundo finge que gosta"],
+            ["Amo", "Odeio"],
+            ["Expectativa", "Realidade"],
+            ["Underrated", "Overrated"],
+            ["Parte do corpo util", "Parte do corpo inutil"],
+            ["Pessoa desinteresante", "Pessoa Divertida"],
+            ["Coisa de Brasileiro", "Coisa de Gringo"],
+            ["Normal Pet", "Exotic Pet"]
+        ];
+
+        // --- DOM Elements ---
+        const needle = document.getElementById('needle');
+        const psychicMarker = document.getElementById('psychicMarker'); 
+        const dialInput = document.getElementById('dialInput');
+        const targetZone = document.getElementById('targetZone');
+        const leftConcept = document.getElementById('leftConcept');
+        const rightConcept = document.getElementById('rightConcept');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const gameState = document.getElementById('gameState');
+        const themeToggle = document.getElementById('themeToggle');
+        
+        const btnToggleTarget = document.getElementById('btnToggleTarget');
+        const btnHideForGuessing = document.getElementById('btnHideForGuessing');
+        const btnReveal = document.getElementById('btnReveal');
+        const btnNewRound = document.getElementById('btnNewRound');
+        const btnSameCard = document.getElementById('btnSameCard');
+        const btnUseCustom = document.getElementById('btnUseCustom');
+        const customLeft = document.getElementById('customLeft');
+        const customRight = document.getElementById('customRight');
+
+        // --- State ---
+        let targetAngle = 90; 
+        let targetWidth = 22; 
+        let bullseyeWidth = 6; 
+        let isTargetVisible = false;
+        let isDarkMode = false;
+
+        // --- Initialization ---
+        function init() {
+            setupEventListeners();
+            startRandomRound();
+            
+            // Check system preference
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                toggleTheme();
+            }
+        }
+
+        function setupEventListeners() {
+            // Theme Toggle
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // Slider
+            dialInput.addEventListener('input', (e) => {
+                const angle = e.target.value;
+                const rotation = angle - 90;
+                needle.style.transform = `translateX(-50%) rotate(${rotation}deg)`; 
+            });
+
+            dialInput.addEventListener('touchmove', (e) => {
+                e.stopPropagation();
+            }, { passive: false });
+
+            // Buttons
+            btnNewRound.addEventListener('click', startRandomRound);
+            
+            btnSameCard.addEventListener('click', () => {
+                const currentLeft = leftConcept.textContent;
+                const currentRight = rightConcept.textContent;
+                setupBoard(currentLeft, currentRight);
+            });
+
+            btnUseCustom.addEventListener('click', () => {
+                const l = customLeft.value.trim();
+                const r = customRight.value.trim();
+                if(!l || !r) {
+                    alert("Please fill in both Left and Right concepts.");
+                    return;
+                }
+                customLeft.value = "";
+                customRight.value = "";
+                setupBoard(l, r);
+            });
+
+            btnToggleTarget.addEventListener('click', () => {
+                isTargetVisible = !isTargetVisible;
+                updateTargetVisibility();
+            });
+
+            btnHideForGuessing.addEventListener('click', () => {
+                isTargetVisible = false;
+                updateTargetVisibility();
+                
+                psychicMarker.classList.remove('visible'); 
+                
+                btnToggleTarget.style.display = 'none';
+                btnHideForGuessing.style.display = 'none';
+                btnReveal.style.display = 'inline-block';
+                
+                gameState.textContent = "Guesser Phase: Move the dial to the clue!";
+                gameState.style.color = "var(--accent-color)";
+                dialInput.disabled = false;
+            });
+
+            btnReveal.addEventListener('click', revealResult);
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = isDarkMode ? "☀️" : "🌙";
+        }
+
+        // --- Core Logic ---
+
+        function startRandomRound() {
+            const pair = concepts[Math.floor(Math.random() * concepts.length)];
+            if (Math.random() > 0.5) {
+                setupBoard(pair[0], pair[1]);
+            } else {
+                setupBoard(pair[1], pair[0]);
+            }
+        }
+
+        function setupBoard(leftText, rightText) {
+            leftConcept.textContent = leftText;
+            rightConcept.textContent = rightText;
+
+            // Randomize Target Position (5 to 175 degrees)
+            targetAngle = Math.floor(Math.random() * 170) + 5;
+
+            // --- Set Target CSS ---
+            const rotation = targetAngle - 90; 
+
+            // Target Marker
+            psychicMarker.style.transform = `translateX(-50%) rotate(${rotation}deg)`; 
+            
+            const wedgeStart = targetAngle - (targetWidth / 2);
+            const wedgeEnd = targetAngle + (targetWidth / 2);
+            const bullseyeWedgeStart = targetAngle - (bullseyeWidth / 2);
+            const bullseyeWedgeEnd = targetAngle + (bullseyeWidth / 2);
+
+            targetZone.style.setProperty('--start-deg', `${wedgeStart}deg`);
+            targetZone.style.setProperty('--end-deg', `${wedgeEnd}deg`);
+            targetZone.style.setProperty('--center-start', `${bullseyeWedgeStart}deg`);
+            targetZone.style.setProperty('--center-end', `${bullseyeWedgeEnd}deg`);
+            
+            // --- Reset UI State ---
+            isTargetVisible = true; 
+            updateTargetVisibility();
+            psychicMarker.classList.add('visible'); 
+
+            // Reset Player Needle
+            dialInput.value = 90;
+            dialInput.dispatchEvent(new Event('input')); 
+            dialInput.disabled = false;
+
+            // Reset Buttons
+            btnToggleTarget.style.display = 'inline-block';
+            btnHideForGuessing.style.display = 'inline-block';
+            btnReveal.style.display = 'none';
+            
+            scoreDisplay.textContent = "";
+            gameState.textContent = "Psychic Phase: View target & give a clue";
+            gameState.style.color = "var(--divider-color)";
+        }
+
+        function updateTargetVisibility() {
+            if (isTargetVisible) {
+                targetZone.classList.add('visible');
+                btnToggleTarget.textContent = "Hide Target";
+            } else {
+                targetZone.classList.remove('visible');
+                btnToggleTarget.textContent = "Show Target";
+            }
+        }
+
+        function revealResult() {
+            isTargetVisible = true;
+            updateTargetVisibility();
+            psychicMarker.classList.add('visible');
+
+            const guess = parseInt(dialInput.value);
+            const dist = Math.abs(guess - targetAngle);
+            
+            let points = 0;
+            let message = "";
+
+            const bullseyeRadius = bullseyeWidth / 2;
+            const targetRadius = targetWidth / 2;
+
+            if (dist <= bullseyeRadius +2) {
+                points = 4; // Bullseye
+                message = "PERFECT! (4 pts - Bullseye)";
+            } else if (dist <= targetRadius +2) {
+                points = 3; // Inner Ring
+                message = "Great! (3 pts - Inner Ring)";
+            } else if (dist <= targetRadius + 7) {
+                points = 2; // Outer Ring
+                message = "Close! (2 pts - Outer Ring)";
+            } else {
+                points = 0;
+                message = "Miss (0 pts)";
+            }
+
+            scoreDisplay.textContent = message;
+            gameState.textContent = `Round Over. Target was at ${targetAngle}°. Your guess was ${guess}°.`;
+            gameState.style.color = "var(--needle-color)";
+            btnReveal.style.display = 'none';
+            btnToggleTarget.style.display = 'none'; 
+            dialInput.disabled = true;
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
